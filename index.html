@@ -7,21 +7,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            background-color: #1a1a1a; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
-            overflow: hidden;
-        }
+        html, body { height: 100%; width: 100%; background-color: #1a1a1a; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         
-        /* ব্লিঙ্কিং লোগো কন্টেইনার */
-        .loading-container { 
-            text-align: center; 
+        /* ১. ব্লিঙ্কিং লোগো স্ক্রিন (শুরুতে এটি দেখাবে) */
+        #loadingSection {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #1a1a1a;
             display: flex;
             flex-direction: column;
+            justify-content: center;
             align-items: center;
+            z-index: 9999;
         }
         
         @keyframes blink { 
@@ -30,21 +27,53 @@
             100% { opacity: 0.2; transform: scale(0.98); } 
         }
         
-        .loading-container img { 
-            width: 180px; 
-            height: 180px;
+        #loadingSection img { 
+            width: 180px; height: 180px;
             animation: blink 1.5s infinite ease-in-out; 
             margin-bottom: 20px;
         }
 
-        .loading-text {
-            color: #ffffff;
-            font-family: 'Segoe UI', sans-serif;
-            font-size: 16px;
-            letter-spacing: 0.5px;
+        .loading-text { color: #ffffff; font-size: 16px; text-align: center; }
+
+        /* ২. মূল ওয়েবসাইট ইন্টারফেস (পিডিএফ দেখানোর মূল ফ্রেম) */
+        #mainPortal {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            background: #f4f6f9;
         }
 
-        /* এরর মেসেজ দেখানোর স্টাইল */
+        /* আপনার দেওয়া অফিশিয়াল স্ক্রিনশটের মতো টপ হেডার বার */
+        .top-bar {
+            background: #006643; /* অফিশিয়াল সৌদি চেম্বার গ্রিন কালার */
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            height: 60px;
+        }
+
+        .top-bar .title-ar { font-size: 18px; font-weight: bold; }
+        .top-bar .title-en { font-size: 12px; opacity: 0.9; text-align: right; }
+
+        /* একই ট্যাবে ফুল স্ক্রিন পিডিএফ ভিউয়ার */
+        .pdf-viewer-container {
+            flex: 1;
+            width: 100%;
+            height: calc(100vh - 60px);
+            background: #525659;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* ৩. এরর মেসেজ বক্স */
         .error-box {
             background: #ffffff;
             padding: 30px;
@@ -52,10 +81,13 @@
             text-align: center;
             box-shadow: 0 4px 16px rgba(0,0,0,0.5);
             max-width: 450px;
-            width: 100%;
+            width: 90%;
             display: none;
-            font-family: 'Segoe UI', sans-serif;
             border-top: 5px solid #c62828;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10000;
         }
         .error-title { color: #c62828; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
         .error-desc { color: #555; font-size: 14px; }
@@ -63,9 +95,19 @@
 </head>
 <body>
 
-    <div id="loadingSection" class="loading-container">
+    <div id="loadingSection">
         <img src="logo.png" alt="Chamber Logo">
         <div class="loading-text">جاري تحميل المستند الرسمي... (Official Document Loading...)</div>
+    </div>
+
+    <div id="mainPortal">
+        <div class="top-bar">
+            <div class="title-ar">الـغـرفـة الـتـجـاريـة - بـوابـة الـمـلـفـات</div>
+            <div class="title-en">Chamber of Commerce<br>Official Files Portal</div>
+        </div>
+        <div class="pdf-viewer-container">
+            <iframe id="pdfFrame" src=""></iframe>
+        </div>
     </div>
 
     <div id="errorSection" class="error-box">
@@ -83,6 +125,7 @@
 
     function showError(title, desc) {
         document.getElementById('loadingSection').style.display = 'none';
+        document.getElementById('mainPortal').style.display = 'none';
         document.getElementById('errorSection').style.display = 'block';
         document.getElementById('errorTitle').innerText = title;
         document.getElementById('errorDesc').innerText = desc;
@@ -106,17 +149,24 @@
                 return;
             }
 
-            // pdfs ফোল্ডারটি files-portal এর ভেতরেই আছে
+            // সঠিক পাথ ডিফাইন করা হলো
             const pdfUrl = `pdfs/${decryptedRealId}.pdf`;
 
-            // ফাইলটি সার্ভারে আছে কিনা চেক করা
+            // ফাইল সার্ভারে আছে কিনা চেক করা
             fetch(pdfUrl, { method: 'HEAD' })
                 .then(response => {
                     if (response.ok) {
-                        // ফাইল পাওয়া গেছে! এবার ব্লিঙ্কিং শেষ করে সরাসরি পিডিএফ ওপেন হবে
+                        // ফাইল লোড করার জন্য সঠিক পাথ সেট করা
+                        const pdfFrame = document.getElementById('pdfFrame');
+                        
+                        // গিটহাবের আইফ্রেম বাস্টিং রোধ করতে সরাসরি রিলেটিভ পাথ পাস করা হলো
+                        pdfFrame.src = pdfUrl;
+
+                        // ১.৫ সেকেন্ড লোগো ব্লিঙ্ক করার পর মূল ফ্রেমটি একই উইন্ডোতে দেখাবে
                         setTimeout(() => {
-                            window.location.replace(pdfUrl);
-                        }, 1500); // ১.৫ সেকেন্ড লোগো ব্লিঙ্ক করার পর অটোমেটিক রিডাইরেক্ট হবে
+                            document.getElementById('loadingSection').style.display = 'none';
+                            document.getElementById('mainPortal').style.display = 'flex';
+                        }, 1500);
                     } else {
                         showError("❌ Document Not Found", "The requested file does not exist in records.");
                     }
