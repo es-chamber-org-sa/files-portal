@@ -108,10 +108,9 @@
             background: #525659;
         }
 
-        /* হেডার লোগো আরও ছোট করা হয়েছে */
         .top-gradient-bar {
             background: linear-gradient(to right, #00965e 0%, #007c89 40%, #2e519b 75%, #3d5ba9 100%);
-            height: 48px; /* হাইট কমানো হয়েছে */
+            height: 48px;
             width: 100%;
             display: flex;
             justify-content: flex-end;
@@ -121,44 +120,65 @@
             flex-shrink: 0;
         }
 
-        .top-gradient-bar .right-logo { height: 30px; width: auto; } /* লোগো ছোট করা হয়েছে */
+        .top-gradient-bar .right-logo { height: 30px; width: auto; }
         .top-gradient-bar .right-logo img { height: 100%; width: auto; object-fit: contain; }
 
-        /* মিনিমাল কাস্টম পিডিএফ টুলবার (বাম পাশ থেকে শুরু) */
+        /* আপনার দেওয়া স্ক্রিনশট অনুযায়ী টুলবারের হুবহু ডিজাইন */
         .custom-pdf-toolbar {
             background-color: #f1f3f4;
             height: 44px;
             width: 100%;
             display: flex;
-            justify-content: flex-start; /* বাম দিক থেকে শুরু করার জন্য */
+            justify-content: flex-start;
             align-items: center;
-            gap: 8px;
-            padding: 0 12px;
+            gap: 6px; /* বাটনগুলোর মাঝের স্পেস */
+            padding: 0 10px;
             border-bottom: 1px solid #dadce0;
             flex-shrink: 0;
             z-index: 100;
         }
 
-        /* ছোট সাদা বক্সের ভেতর কালো আইকন স্টাইলিং */
+        /* কমন বাটন স্টাইলিং (সাদা বক্স) */
         .toolbar-btn {
-            background: #ffffff; /* সাদা বক্স */
+            background: #ffffff;
             border: 1px solid #dcdcdc;
-            border-radius: 6px;
-            width: 34px; /* ছোট চারকোণা বক্স */
-            height: 34px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
-        /* আইকনগুলোর ভেতরের কালো কালার এবং সাইজ */
+        /* চারকোণা বাটন (Shape ১) */
+        .shape-rect {
+            width: 34px;
+            height: 34px;
+            border-radius: 6px;
+        }
+
+        /* গোল বাটন (Shape ২) */
+        .shape-circle {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+        }
+
+        /* বড় চারকোণা পেজ কাউন্টার বাটন */
+        .shape-big-rect {
+            padding: 0 12px;
+            height: 34px;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #1c1b1f;
+            font-weight: 500;
+        }
+
+        /* কালো আইকন স্টাইলিং */
         .toolbar-btn svg {
             width: 18px;
             height: 18px;
-            fill: #1c1b1f; /* নিখুঁত কালো কালার আইকন */
+            fill: #1c1b1f;
         }
 
         .toolbar-btn:active { background: #e8eaed; transform: scale(0.92); }
@@ -233,23 +253,45 @@
         </div>
 
         <div class="custom-pdf-toolbar">
-            <button class="toolbar-btn" id="downloadBtn" title="Download">
+            <button class="toolbar-btn shape-rect" title="Sidebar">
+                <svg viewBox="0 0 24 24"><path d="M4 18h16v-2H4v2zm0-5h16v-2H4v2zm0-7v2h16V6H4z"/></svg>
+            </button>
+            
+            <button class="toolbar-btn shape-rect" onclick="zoomOut()" title="Previous Page">
+                <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>
+
+            <div class="toolbar-btn shape-big-rect" title="Page Count">1/1</div>
+
+            <button class="toolbar-btn shape-rect" onclick="zoomIn()" title="Next Page">
+                <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+            </button>
+            
+            <button class="toolbar-btn shape-circle" id="downloadBtn" title="Download">
                 <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm14-9h-4V3H9v8H5l7 7 7-7z"/></svg>
             </button>
             
-            <button class="toolbar-btn" onclick="zoomIn()" title="Zoom In">
-                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            </button>
-            
-            <button class="toolbar-btn" onclick="zoomOut()" title="Zoom Out">
+            <button class="toolbar-btn shape-circle" onclick="zoomOut()" title="Zoom Out">
                 <svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
             </button>
             
-            <button class="toolbar-btn" onclick="rotatePDF()" title="Rotate">
-                <svg viewBox="0 0 24 24"><path d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.16-.84.52-1.61 1.02-2.47zm1.01-1.02c.86-.5 1.63-.86 2.47-1.02V4.47c-1.39.17-2.73.73-3.89 1.63l1.42 1.41zM13 4.07v2.02c.84.16 1.61.52 2.47 1.02l1.41-1.42C15.73 4.8 14.39 4.24 13 4.07zm6.93 6.93h2.02c-.17-1.39-.73-2.73-1.63-3.89l-1.41 1.42c.5.86.86 1.63 1.02 2.47zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.89-4.89l1.42 1.41c.9-1.16 1.46-2.5 1.63-3.89h-2.02c-.16.84-.53 1.61-1.03 2.48zM13 17.91v2.02c1.39-.17 2.73-.73 3.89-1.63l-1.42-1.41c-.86.5-1.63.86-2.47 1.02zm-2.47 1.02v-2.02c-.84-.16-1.61-.53-2.47-1.03L6.65 19.3c1.16.9 2.5 1.46 3.88 1.63zM4.07 13h2.02c.16.84.53 1.61 1.03 2.47l-1.42 1.42c-.9-1.16-1.46-2.5-1.63-3.89z"/></svg>
+            <button class="toolbar-btn shape-circle" onclick="zoomIn()" title="Zoom In">
+                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             </button>
             
-            <button class="toolbar-btn" onclick="toggleDarkMode()" title="Dark Mode">
+            <button class="toolbar-btn shape-circle" title="Fit to Page">
+                <svg viewBox="0 0 24 24"><path d="M7 19h10v2H7v-2zm10-14H7V3h10v2zm0 2h-2v10h2V7zm-8 10h-2V7h2v10z"/></svg>
+            </button>
+
+            <button class="toolbar-btn shape-circle" onclick="rotatePDF(false)" title="Rotate Left">
+                <svg viewBox="0 0 24 24"><path d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.16-.84.52-1.61 1.02-2.47zm1.01-1.02c.86-.5 1.63-.86 2.47-1.02V4.47c-1.39.17-2.73.73-3.89 1.63l1.42 1.41zM13 4.07v2.02c.84.16 1.61.52 2.47 1.02l1.41-1.42C15.73 4.8 14.39 4.24 13 4.07zm6.93 6.93h2.02c-.17-1.39-.73-2.73-1.63-3.89l-1.41 1.42c.5.86.86 1.63 1.02 2.47z"/></svg>
+            </button>
+
+            <button class="toolbar-btn shape-circle" onclick="rotatePDF(true)" title="Rotate Right">
+                <svg viewBox="0 0 24 24"><path d="M15.55 13c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.37-.66-.11-1.48-.87-1.48H5.21l-.94-2H1v2h2l3.6 7.59-1.35 2.44C4.52 15.37 5.48 17 7 17h12v-2H7l1.1-2h7.45zM6.16 6h12.15l-2.76 5H8.53L6.16 6zM7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+            </button>
+
+            <button class="toolbar-btn shape-circle" onclick="toggleDarkMode()" title="Dark Mode">
                 <svg viewBox="0 0 24 24"><path d="M10 2c-1.82 0-3.53.5-5 1.35C7.99 5.08 10 8.3 10 12s-2.01 6.92-5 8.65C6.47 21.5 8.18 22 10 22c5.52 0 10-4.48 10-10S15.52 2 10 2z"/></svg>
             </button>
         </div>
@@ -299,8 +341,8 @@
         }
     }
 
-    function rotatePDF() {
-        currentRotation = (currentRotation + 90) % 360;
+    function rotatePDF(isClockwise) {
+        currentRotation = isClockwise ? (currentRotation + 90) % 360 : (currentRotation - 90) % 360;
         applyTransforms();
     }
 
