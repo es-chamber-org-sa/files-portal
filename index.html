@@ -2,79 +2,372 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Chamber Files Portal - Verification</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            background-color: #1a1a1a; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
-            overflow: hidden;
+        html, body { height: 100%; width: 100%; background-color: #1a1a1a; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        
+        /* ১. ব্লিঙ্কিং লোগো এবং সার্কেল অ্যানিমেশন সেকশন */
+        #loadingSection {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
         }
         
-        /* ব্লিঙ্কিং লোগো কন্টেইনার */
-        .loading-container { 
-            text-align: center; 
+        .logo-wrapper {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .logo-wrapper img {
+            width: 110px;
+            height: 110px;
+            object-fit: contain;
+            z-index: 5;
+        }
+
+        .circle-pulse {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,150,94,0.8) 0%, rgba(46,81,155,0.8) 100%);
+            z-index: 1;
+            animation: rippleBlink 2s infinite ease-in-out;
+        }
+
+        .circle-pulse-delayed {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,150,94,0.6) 0%, rgba(46,81,155,0.6) 100%);
+            z-index: 1;
+            animation: rippleBlink 2s infinite ease-in-out;
+            animation-delay: 1s;
+        }
+        
+        @keyframes rippleBlink {
+            0% { transform: scale(0.9); opacity: 0.3; box-shadow: 0 0 0 0 rgba(0, 150, 94, 0.4), 0 0 0 0 rgba(46, 81, 155, 0.4); }
+            50% { opacity: 0.9; box-shadow: 0 0 25px 12px rgba(0, 150, 94, 0.6), 0 0 25px 12px rgba(46, 81, 155, 0.6); }
+            100% { transform: scale(1.6); opacity: 0; box-shadow: 0 0 40px 25px rgba(0, 150, 94, 0), 0 0 40px 25px rgba(46, 81, 155, 0); }
+        }
+
+        /* ২. ইন্টারস্টেশিয়াল পপ-আপ */
+        #interstitialPopup {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(26, 26, 26, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+        }
+
+        .wait-box {
+            background: #ffffff;
+            padding: 30px 45px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             display: flex;
             flex-direction: column;
             align-items: center;
         }
-        
-        @keyframes blink { 
-            0% { opacity: 0.2; transform: scale(0.98); } 
-            50% { opacity: 1; transform: scale(1); } 
-            100% { opacity: 0.2; transform: scale(0.98); } 
-        }
-        
-        .loading-container img { 
-            width: 180px; 
-            height: 180px;
-            animation: blink 1.5s infinite ease-in-out; 
-            margin-bottom: 20px;
+
+        .blue-spinner {
+            width: 38px;
+            height: 38px;
+            border: 4px solid #e1f5fe;
+            border-top: 4px solid #42a5f5;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 15px;
         }
 
-        .loading-text {
-            color: #ffffff;
-            font-family: 'Segoe UI', sans-serif;
-            font-size: 16px;
-            letter-spacing: 0.5px;
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .wait-text { color: #34495e; font-size: 19px; font-weight: 600; }
+
+        /* ৩. মূল ওয়েবসাইট ইন্টারফেস */
+        #mainPortal {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            background: #525659;
         }
 
-        /* এরর মেসেজ দেখানোর স্টাইল */
+        .top-gradient-bar {
+            background: linear-gradient(to right, #00965e 0%, #007c89 40%, #2e519b 75%, #3d5ba9 100%);
+            height: 48px;
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0 15px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+            flex-shrink: 0;
+        }
+
+        .top-gradient-bar .right-logo { height: 30px; width: auto; }
+        .top-gradient-bar .right-logo img { height: 100%; width: auto; object-fit: contain; }
+
+        /* 👑 মডিফাইড কাস্টম পিডিএফ টুলবার (১০০% সেম টু সেম ডিজাইন ও রেসপন্সিভ লেআউট) */
+        .custom-pdf-toolbar {
+            background-color: #f1f3f4;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap; /* মোবাইলে ২ লাইনে ভাঙ্গার প্রধান লজিক */
+            padding: 5px 8px;
+            border-bottom: 1px solid #dadce0;
+            flex-shrink: 0;
+            z-index: 100;
+            gap: 6px;
+        }
+
+        /* বাম এবং ডান প্রধান সেকশন */
+        .toolbar-left, .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap; /* মোবাইলের ভেতরের বাটনগুলোকে সিকোয়েন্স ঠিক রাখতে সাহায্য করবে */
+        }
+
+        /* বাটন গ্রুপ কন্টেইনার (যেগুলো সবসময় জোড়ায় বা একসাথে থাকবে) */
+        .group-container {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* কমন বাটন স্টাইলিং (ইমেজের মতো বর্ডার রেডিয়াস ও লাইট কালার) */
+        .toolbar-btn {
+            background: #ffffff;
+            border: 1px solid #dadce0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s ease;
+            height: 32px;
+        }
+
+        /* চারকোণা ও নরমাল বাটন সাইজ */
+        .shape-rect, .shape-circle {
+            width: 32px;
+            border-radius: 4px;
+        }
+
+        /* পেজ নাম্বার বক্সের বড় বাটন */
+        .shape-big-rect {
+            padding: 0 14px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #1c1b1f;
+            font-weight: 500;
+        }
+
+        /* জুম ড্রপডাউন সিলেক্ট বক্স */
+        .zoom-dropdown {
+            height: 32px;
+            padding: 0 6px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            background: #ffffff;
+            font-size: 13px;
+            font-weight: 500;
+            color: #1c1b1f;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* ইমেজের সাথে মিল রেখে আইকন কালার এবং সাইজ */
+        .toolbar-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: #3c4043;
+        }
+
+        .toolbar-btn:hover { background: #f8fafc; border-color: #bdc1c6; }
+        .toolbar-btn:active { background: #e8eaed; transform: scale(0.95); }
+
+        /* পিডিএফ ভিউয়ার এলাকা */
+        .pdf-viewer-container {
+            flex: 1;
+            width: 100%;
+            background: #525659;
+            position: relative;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #pdfIframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+            transform-origin: top center;
+            transition: transform 0.2s ease;
+        }
+
+        /* ডার্ক মোড ইনভার্স ইফেক্ট */
+        .dark-active #pdfIframe {
+            filter: invert(0.9) hue-rotate(180deg);
+        }
+
+        /* ৪. এরর মেসেজ BOX */
         .error-box {
             background: #ffffff;
-            padding: 30px;
-            border-radius: 8px;
+            padding: 35px 25px;
+            border-radius: 12px;
             text-align: center;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-            max-width: 450px;
-            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 380px;
+            width: 85%;
             display: none;
-            font-family: 'Segoe UI', sans-serif;
-            border-top: 5px solid #c62828;
+            border-top: 6px solid #ef5350;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10000;
         }
-        .error-title { color: #c62828; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
-        .error-desc { color: #555; font-size: 14px; }
+        .error-icon { color: #ef5350; font-size: 40px; margin-bottom: 12px; }
+        .error-title { color: #d32f2f; font-size: 20px; font-weight: bold; margin-bottom: 10px; }
+        .error-desc { color: #666; font-size: 14px; line-height: 1.5; }
+
+        /* 📱 মোবাইলের জন্য কারেকশন: ২ লাইনেই বাটনগুলো বাম (Left) দিক থেকে শুরু হবে */
+        @media screen and (max-width: 768px) {
+            .custom-pdf-toolbar {
+                justify-content: flex-start; /* কন্টেইনারের শুরুতেই বাটন থাকবে */
+                gap: 8px;
+                padding: 6px 8px;
+            }
+            .toolbar-left {
+                width: 100%;
+                justify-content: flex-start; /* ১ম লাইন বামে ফিক্সড থাকবে */
+                gap: 6px;
+            }
+            .toolbar-right {
+                width: 100%;
+                justify-content: flex-start; /* ২য় লাইনও একদম বামে চলে আসবে, মাঝে যাবে না */
+                gap: 6px;
+                padding-top: 2px;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <div id="loadingSection" class="loading-container">
-        <img src="logo.png" alt="Chamber Logo">
-        <div class="loading-text">جاري تحميل المستند الرسمي... (Official Document Loading...)</div>
+    <div id="loadingSection">
+        <div class="logo-wrapper">
+            <div class="circle-pulse"></div>
+            <div class="circle-pulse-delayed"></div>
+            <img src="logo.png" alt="Chamber Logo">
+        </div>
+    </div>
+
+    <div id="interstitialPopup">
+        <div class="wait-box">
+            <div class="blue-spinner"></div>
+            <div class="wait-text">Please wait Loading...</div>
+        </div>
+    </div>
+
+    <div id="mainPortal">
+        <div class="top-gradient-bar">
+            <div class="right-logo">
+                <img src="header-logo.png" alt="Chamber Right Logo">
+            </div>
+        </div>
+
+        <div class="custom-pdf-toolbar">
+            
+            <div class="toolbar-left">
+                <div class="group-container">
+                    <button class="toolbar-btn shape-rect" title="Sidebar">
+                        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 16H5V5h7v14zm7 0h-5V5h5v14z"/></svg>
+                    </button>
+                </div>
+                
+                <div class="group-container">
+                    <button class="toolbar-btn shape-rect" title="Previous Page">
+                        <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>
+                    </button>
+                    <div class="toolbar-btn shape-big-rect" title="Page Count">1/01</div>
+                    <button class="toolbar-btn shape-rect" title="Next Page">
+                        <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+                    </button>
+                </div>
+                
+                <div class="group-container">
+                    <button class="toolbar-btn shape-circle" id="downloadBtn" title="Download">
+                        <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+                    </button>
+                    <button class="toolbar-btn shape-circle" onclick="toggleDarkMode()" title="Dark Mode">
+                        <svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="toolbar-right">
+                <div class="group-container">
+                    <button class="toolbar-btn shape-circle" onclick="zoomOut()" title="Zoom Out">
+                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z"/></svg>
+                    </button>
+                    <select class="zoom-dropdown" id="zoomSelect">
+                        <option value="1">100%</option>
+                        <option value="1.5" selected>150%</option>
+                        <option value="2">200%</option>
+                    </select>
+                    <button class="toolbar-btn shape-circle" onclick="zoomIn()" title="Zoom In">
+                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zm.5-7H9v2H7v1h2v2h1v-2h2V9h-2z"/></svg>
+                    </button>
+                    <button class="toolbar-btn shape-circle" title="Fit to Page">
+                        <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+                    </button>
+                </div>
+
+                <div class="group-container">
+                    <button class="toolbar-btn shape-circle" onclick="rotatePDF(false)" title="Rotate Left">
+                        <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L3.3 8.3V15h6.7l-2.7-2.7c1.45-1.14 3.29-1.8 5.2-1.8 4.14 0 7.5 3.01 7.5 6.72 0 1.94-.78 3.69-2.05 4.94l1.42 1.42C21.1 21.62 22 19.41 22 17c0-4.97-4.25-9-9.5-9z"/></svg>
+                    </button>
+                    <button class="toolbar-btn shape-circle" onclick="rotatePDF(true)" title="Rotate Right">
+                        <svg viewBox="0 0 24 24"><path d="M11.5 9c2.65 0 5.05.99 6.9 2.6l2.3-2.3V16h-6.7l2.7-2.7c-1.45-1.14-3.29-1.8-5.2-1.8-4.14 0-7.5 3.01-7.5 6.72 0 1.94.78 3.69 2.05 4.94l-1.42 1.42C2.9 22.62 2 20.41 2 18c0-4.97 4.25-9 9.5-9z"/></svg>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="pdf-viewer-container" id="pdfContainer">
+            <iframe id="pdfIframe" src=""></iframe>
+        </div>
     </div>
 
     <div id="errorSection" class="error-box">
-        <div id="errorTitle" class="error-title"></div>
-        <div id="errorDesc" class="error-desc"></div>
+        <div class="error-icon">❌</div>
+        <div id="errorTitle" class="error-title">Document Not Found</div>
+        <div id="errorDesc" class="error-desc">The requested file does not exist in records.</div>
     </div>
 
 <script>
     const SECRET_KEY = "ChamberOfficialSecretKey#2026";
+    let currentZoom = 1.5; 
+    let currentRotation = 0;
+    let globalPdfUrl = "";
 
     function getQueryParam(param) {
         const urlParams = new URLSearchParams(window.location.search);
@@ -83,50 +376,115 @@
 
     function showError(title, desc) {
         document.getElementById('loadingSection').style.display = 'none';
+        document.getElementById('interstitialPopup').style.display = 'none';
+        document.getElementById('mainPortal').style.display = 'none';
         document.getElementById('errorSection').style.display = 'block';
         document.getElementById('errorTitle').innerText = title;
         document.getElementById('errorDesc').innerText = desc;
+    }
+
+    document.getElementById('zoomSelect').addEventListener('change', function(e) {
+        currentZoom = parseFloat(e.target.value);
+        applyTransforms();
+    });
+
+    function zoomIn() {
+        if (currentZoom < 2.6) {
+            currentZoom += 0.2;
+            document.getElementById('zoomSelect').value = currentZoom.toFixed(1);
+            applyTransforms();
+        }
+    }
+
+    function zoomOut() {
+        if (currentZoom > 0.6) {
+            currentZoom -= 0.2;
+            document.getElementById('zoomSelect').value = currentZoom.toFixed(1);
+            applyTransforms();
+        }
+    }
+
+    function rotatePDF(isClockwise) {
+        currentRotation = isClockwise ? (currentRotation + 90) % 360 : (currentRotation - 90) % 360;
+        applyTransforms();
+    }
+
+    function applyTransforms() {
+        const iframe = document.getElementById('pdfIframe');
+        iframe.style.transform = `scale(${currentZoom}) rotate(${currentRotation}deg)`;
+    }
+
+    function toggleDarkMode() {
+        const container = document.getElementById('pdfContainer');
+        container.classList.toggle('dark-active');
     }
 
     window.addEventListener('DOMContentLoaded', () => {
         const encryptedId = getQueryParam('id');
 
         if (!encryptedId) {
-            showError("❌ Error 403", "Invalid Access Token or Bad Request.");
+            showError("Document Not Found", "The requested file does not exist in records.");
             return;
         }
 
         try {
             const formattedToken = encryptedId.replace(/ /g, '+');
             const bytes = CryptoJS.AES.decrypt(formattedToken, SECRET_KEY);
-            const decryptedRealId = bytes.toString(CryptoJS.enc.Utf8);
+            const decryptedData = bytes.toString(CryptoJS.enc.Utf8);
 
-            if (!decryptedRealId) {
-                showError("❌ Verification Failed", "Tampered or Expired Token.");
+            if (!decryptedData) {
+                showError("Verification Failed", "Tampered or Expired Token.");
                 return;
             }
 
-            // pdfs ফোল্ডারটি files-portal এর ভেতরেই আছে
-            const pdfUrl = `pdfs/${decryptedRealId}.pdf`;
+            let decryptedRealId = "";
+            if (decryptedData.includes('|')) {
+                decryptedRealId = decryptedData.split('|')[1];
+            } else {
+                decryptedRealId = decryptedData;
+            }
 
-            // ফাইলটি সার্ভারে আছে কিনা চেক করা
-            fetch(pdfUrl, { method: 'HEAD' })
+            globalPdfUrl = `pdfs/${decryptedRealId}.pdf`;
+
+            fetch(globalPdfUrl, { method: 'HEAD' })
                 .then(response => {
                     if (response.ok) {
-                        // ফাইল পাওয়া গেছে! এবার ব্লিঙ্কিং শেষ করে সরাসরি পিডিএফ ওপেন হবে
+                        const encodedAbsoluteUrl = encodeURIComponent(window.location.origin + window.location.pathname.replace('index.html', '') + globalPdfUrl);
+                        const viewerUrl = `https://docs.google.com/gview?url=${encodedAbsoluteUrl}&embedded=true`;
+                        
+                        const iframe = document.getElementById('pdfIframe');
+                        iframe.src = viewerUrl;
+
+                        document.getElementById('downloadBtn').onclick = function() {
+                            const link = document.createElement('a');
+                            link.href = globalPdfUrl;
+                            link.download = `${decryptedRealId}.pdf`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        };
+
                         setTimeout(() => {
-                            window.location.replace(pdfUrl);
-                        }, 1500); // ১.৫ সেকেন্ড লোগো ব্লিঙ্ক করার পর অটোমেটিক রিডাইরেক্ট হবে
+                            document.getElementById('loadingSection').style.display = 'none';
+                            document.getElementById('interstitialPopup').style.display = 'flex';
+
+                            setTimeout(() => {
+                                document.getElementById('interstitialPopup').style.display = 'none';
+                                document.getElementById('mainPortal').style.display = 'flex';
+                                applyTransforms();
+                            }, 750); 
+
+                        }, 1800);
                     } else {
-                        showError("❌ Document Not Found", "The requested file does not exist in records.");
+                        showError("Document Not Found", "The requested file does not exist in records.");
                     }
                 })
                 .catch(error => {
-                    showError("❌ System Error", "Unable to complete verification portal request.");
+                    showError("System Error", "Unable to complete verification portal request.");
                 });
 
         } catch (e) {
-            showError("❌ Error", "Invalid Security Encryption Format.");
+            showError("Error", "Invalid Security Encryption Format.");
         }
     });
 </script>
