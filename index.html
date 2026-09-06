@@ -5,13 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Chamber Files Portal - Verification</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <!-- PDF.js Library for direct rendering without native browser viewer/toolbar -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; width: 100%; background-color: #1a1a1a; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         
-        /* ১. ব্লিঙ্কিং লোগো এবং সার্কেল অ্যানিমেশন সেকশন */
+        /* ১. লোডিং সেকশন */
         #loadingSection {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -125,80 +124,6 @@
         .top-gradient-bar .right-logo { height: 30px; width: auto; }
         .top-gradient-bar .right-logo img { height: 100%; width: auto; object-fit: contain; }
 
-        /* কাস্টম পিডিএফ টুলবার */
-        .custom-pdf-toolbar {
-            background-color: #f1f3f4;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            padding: 5px 8px;
-            border-bottom: 1px solid #dadce0;
-            flex-shrink: 0;
-            z-index: 100;
-            gap: 6px;
-        }
-
-        .toolbar-left, .toolbar-right {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-
-        .group-container {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .toolbar-btn {
-            background: #ffffff;
-            border: 1px solid #dadce0;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.1s ease;
-            height: 32px;
-        }
-
-        .shape-rect, .shape-circle {
-            width: 32px;
-            border-radius: 4px;
-        }
-
-        .shape-big-rect {
-            padding: 0 14px;
-            border-radius: 4px;
-            font-size: 13px;
-            color: #1c1b1f;
-            font-weight: 500;
-        }
-
-        .zoom-dropdown {
-            height: 32px;
-            padding: 0 6px;
-            border: 1px solid #dadce0;
-            border-radius: 4px;
-            background: #ffffff;
-            font-size: 13px;
-            font-weight: 500;
-            color: #1c1b1f;
-            outline: none;
-            cursor: pointer;
-        }
-
-        .toolbar-btn svg {
-            width: 16px;
-            height: 16px;
-            fill: #3c4043;
-        }
-
-        .toolbar-btn:hover { background: #f8fafc; border-color: #bdc1c6; }
-        .toolbar-btn:active { background: #e8eaed; transform: scale(0.95); }
-
         /* পিডিএফ ভিউয়ার এলাকা */
         .pdf-viewer-container {
             flex: 1;
@@ -207,23 +132,17 @@
             position: relative;
             overflow: auto;
             display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 20px 0;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
             -webkit-overflow-scrolling: touch;
         }
 
-        #pdfCanvas {
+        .pdf-page-canvas {
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            transform-origin: top center;
-            transition: transform 0.2s ease;
-            max-width: 95%;
+            margin-bottom: 10px;
+            max-width: 98%;
             height: auto;
-        }
-
-        /* ডার্ক মোড ইনভার্স ইফেক্ট */
-        .dark-active #pdfCanvas {
-            filter: invert(0.9) hue-rotate(180deg);
         }
 
         /* ৪. এরর মেসেজ BOX */
@@ -245,25 +164,6 @@
         .error-icon { color: #ef5350; font-size: 40px; margin-bottom: 12px; }
         .error-title { color: #d32f2f; font-size: 20px; font-weight: bold; margin-bottom: 10px; }
         .error-desc { color: #666; font-size: 14px; line-height: 1.5; }
-
-        @media screen and (max-width: 768px) {
-            .custom-pdf-toolbar {
-                justify-content: flex-start;
-                gap: 8px;
-                padding: 6px 8px;
-            }
-            .toolbar-left {
-                width: 100%;
-                justify-content: flex-start;
-                gap: 6px;
-            }
-            .toolbar-right {
-                width: 100%;
-                justify-content: flex-start;
-                gap: 6px;
-                padding-top: 2px;
-            }
-        }
     </style>
 </head>
 <body>
@@ -290,68 +190,10 @@
             </div>
         </div>
 
-        <div class="custom-pdf-toolbar">
-            
-            <div class="toolbar-left">
-                <div class="group-container">
-                    <button class="toolbar-btn shape-rect" title="Sidebar">
-                        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 16H5V5h7v14zm7 0h-5V5h5v14z"/></svg>
-                    </button>
-                </div>
-                
-                <div class="group-container">
-                    <button class="toolbar-btn shape-rect" id="prevPageBtn" title="Previous Page">
-                        <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>
-                    </button>
-                    <div class="toolbar-btn shape-big-rect" id="pageCounter" title="Page Count">1/01</div>
-                    <button class="toolbar-btn shape-rect" id="nextPageBtn" title="Next Page">
-                        <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
-                    </button>
-                </div>
-                
-                <div class="group-container">
-                    <button class="toolbar-btn shape-circle" id="downloadBtn" title="Download">
-                        <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
-                    </button>
-                    <button class="toolbar-btn shape-circle" onclick="toggleDarkMode()" title="Dark Mode">
-                        <svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
-                    </button>
-                </div>
-            </div>
-
-            <div class="toolbar-right">
-                <div class="group-container">
-                    <button class="toolbar-btn shape-circle" onclick="zoomOut()" title="Zoom Out">
-                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z"/></svg>
-                    </button>
-                    <select class="zoom-dropdown" id="zoomSelect">
-                        <option value="1">100%</option>
-                        <option value="1.5" selected>150%</option>
-                        <option value="2">200%</option>
-                    </select>
-                    <button class="toolbar-btn shape-circle" onclick="zoomIn()" title="Zoom In">
-                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zm.5-7H9v2H7v1h2v2h1v-2h2V9h-2z"/></svg>
-                    </button>
-                    <button class="toolbar-btn shape-circle" title="Fit to Page">
-                        <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
-                    </button>
-                </div>
-
-                <div class="group-container">
-                    <button class="toolbar-btn shape-circle" onclick="rotatePDF(false)" title="Rotate Left">
-                        <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L3.3 8.3V15h6.7l-2.7-2.7c1.45-1.14 3.29-1.8 5.2-1.8 4.14 0 7.5 3.01 7.5 6.72 0 1.94-.78 3.69-2.05 4.94l1.42 1.42C21.1 21.62 22 19.41 22 17c0-4.97-4.25-9-9.5-9z"/></svg>
-                    </button>
-                    <button class="toolbar-btn shape-circle" onclick="rotatePDF(true)" title="Rotate Right">
-                        <svg viewBox="0 0 24 24"><path d="M11.5 9c2.65 0 5.05.99 6.9 2.6l2.3-2.3V16h-6.7l2.7-2.7c-1.45-1.14-3.29-1.8-5.2-1.8-4.14 0-7.5 3.01-7.5 6.72 0 1.94.78 3.69 2.05 4.94l-1.42 1.42C2.9 22.62 2 20.41 2 18c0-4.97 4.25-9 9.5-9z"/></svg>
-                    </button>
-                </div>
-            </div>
-
-        </div>
+        <!-- টুলবার সম্পূর্ণ রিমুভ করা হয়েছে -->
 
         <div class="pdf-viewer-container" id="pdfContainer">
-            <!-- Canvas tag will directly render PDF pixels cleanly -->
-            <canvas id="pdfCanvas"></canvas>
+            <!-- পিডিএফ-এর সব পেজ নিচে নিচে রেন্ডার হবে -->
         </div>
     </div>
 
@@ -365,14 +207,7 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
     const SECRET_KEY = "ChamberOfficialSecretKey#2026";
-    let currentZoom = 1.5; 
-    let currentRotation = 0;
     let globalPdfUrl = "";
-    
-    let pdfDoc = null;
-    let pageNum = 1;
-    let pageRendering = false;
-    let pageNumPending = null;
 
     function getQueryParam(param) {
         const urlParams = new URLSearchParams(window.location.search);
@@ -388,88 +223,29 @@
         document.getElementById('errorDesc').innerText = desc;
     }
 
-    function renderPage(num) {
-        pageRendering = true;
-        pdfDoc.getPage(num).then(function(page) {
-            const canvas = document.getElementById('pdfCanvas');
-            const ctx = canvas.getContext('2d');
-            
-            const viewport = page.getViewport({ scale: 1.5 });
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            const renderContext = {
-                canvasContext: ctx,
-                viewport: viewport
-            };
-            const renderTask = page.render(renderContext);
-
-            renderTask.promise.then(function() {
-                pageRendering = false;
-                if (pageNumPending !== null) {
-                    renderPage(pageNumPending);
-                    pageNumPending = null;
-                }
-            });
-        });
-
-        document.getElementById('pageCounter').innerText = `${num}/${pdfDoc.numPages < 10 ? '0' + pdfDoc.numPages : pdfDoc.numPages}`;
-    }
-
-    function queueRenderPage(num) {
-        if (pageRendering) {
-            pageNumPending = num;
-        } else {
-            renderPage(num);
-        }
-    }
-
-    document.getElementById('prevPageBtn').addEventListener('click', () => {
-        if (pageNum <= 1) return;
-        pageNum--;
-        queueRenderPage(pageNum);
-    });
-
-    document.getElementById('nextPageBtn').addEventListener('click', () => {
-        if (pageNum >= pdfDoc.numPages) return;
-        pageNum++;
-        queueRenderPage(pageNum);
-    });
-
-    document.getElementById('zoomSelect').addEventListener('change', function(e) {
-        currentZoom = parseFloat(e.target.value);
-        applyTransforms();
-    });
-
-    function zoomIn() {
-        if (currentZoom < 2.6) {
-            currentZoom += 0.2;
-            document.getElementById('zoomSelect').value = currentZoom.toFixed(1);
-            applyTransforms();
-        }
-    }
-
-    function zoomOut() {
-        if (currentZoom > 0.6) {
-            currentZoom -= 0.2;
-            document.getElementById('zoomSelect').value = currentZoom.toFixed(1);
-            applyTransforms();
-        }
-    }
-
-    function rotatePDF(isClockwise) {
-        currentRotation = isClockwise ? (currentRotation + 90) % 360 : (currentRotation - 90) % 360;
-        applyTransforms();
-    }
-
-    function applyTransforms() {
-        const canvas = document.getElementById('pdfCanvas');
-        canvas.style.transform = `scale(${currentZoom}) rotate(${currentRotation}deg)`;
-    }
-
-    function toggleDarkMode() {
+    function renderAllPages(pdfDoc) {
         const container = document.getElementById('pdfContainer');
-        container.classList.toggle('dark-active');
+        container.innerHTML = ''; 
+
+        for (let num = 1; num <= pdfDoc.numPages; num++) {
+            pdfDoc.getPage(num).then(page => {
+                const canvas = document.createElement('canvas');
+                canvas.className = 'pdf-page-canvas';
+                const ctx = canvas.getContext('2d');
+                
+                const viewport = page.getViewport({ scale: 1.5 });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+                
+                page.render(renderContext);
+                container.appendChild(canvas);
+            });
+        }
     }
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -490,27 +266,12 @@
                 return;
             }
 
-            let decryptedRealId = "";
-            if (decryptedData.includes('|')) {
-                decryptedRealId = decryptedData.split('|')[1];
-            } else {
-                decryptedRealId = decryptedData;
-            }
+            let decryptedRealId = decryptedData.includes('|') ? decryptedData.split('|')[1] : decryptedData;
 
             globalPdfUrl = `pdfs/${decryptedRealId}.pdf`;
 
-            pdfjsLib.getDocument(globalPdfUrl).promise.then(pdfDoc_ => {
-                pdfDoc = pdfDoc_;
-                renderPage(pageNum);
-
-                document.getElementById('downloadBtn').onclick = function() {
-                    const link = document.createElement('a');
-                    link.href = globalPdfUrl;
-                    link.download = `${decryptedRealId}.pdf`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                };
+            pdfjsLib.getDocument(globalPdfUrl).promise.then(pdfDoc => {
+                renderAllPages(pdfDoc);
 
                 setTimeout(() => {
                     document.getElementById('loadingSection').style.display = 'none';
@@ -519,7 +280,6 @@
                     setTimeout(() => {
                         document.getElementById('interstitialPopup').style.display = 'none';
                         document.getElementById('mainPortal').style.display = 'flex';
-                        applyTransforms();
                     }, 750); 
 
                 }, 1800);
