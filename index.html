@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chamber Files Portal - Verification</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <!-- PDF.js rendering library for proper fitting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body {
             width: 100%;
-            height: 100%;
+            min-height: 100vh;
             background-color: #1a1a1a;
-            overflow: hidden;
         }
         
         body { 
@@ -64,16 +65,23 @@
         .error-title { color: #c62828; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
         .error-desc { color: #555; font-size: 14px; }
 
-        /* পুরো স্ক্রিন জুরে পিডিএফ দেখানোর আইফ্রেম স্টাইল */
-        #pdfViewer {
-            width: 100vw;
-            height: 100vh;
-            border: none;
+        /* পিডিএফ ক্যানভাস কন্টেইনার - ১০০% ফিট */
+        #pdfViewerContainer {
+            width: 100%;
+            height: 100%;
             display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 9999;
+            flex-direction: column;
+            align-items: center;
+            background-color: #525659;
+            overflow-y: auto;
+        }
+
+        canvas {
+            display: block;
+            width: 100% !important;
+            height: auto !important;
+            max-width: 100%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
     </style>
 </head>
@@ -89,11 +97,12 @@
         <div id="errorDesc" class="error-desc"></div>
     </div>
 
-    <!-- ফুল-স্ক্রিন পিডিএফ ভিউয়ার -->
-    <iframe id="pdfViewer"></iframe>
+    <!-- পিডিএফ রেন্ডার করার কন্টেইনার -->
+    <div id="pdfViewerContainer"></div>
 
 <script>
     const SECRET_KEY = "ChamberOfficialSecretKey#2026";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
     function getQueryParam(param) {
         const urlParams = new URLSearchParams(window.location.search);
@@ -102,9 +111,50 @@
 
     function showError(title, desc) {
         document.getElementById('loadingSection').style.display = 'none';
+        document.getElementById('pdfViewerContainer').style.display = 'none';
         document.getElementById('errorSection').style.display = 'block';
         document.getElementById('errorTitle').innerText = title;
         document.getElementById('errorDesc').innerText = desc;
+    }
+
+    function renderPDF(url) {
+        pdfjsLib.getDocument(url).promise.then(pdf => {
+            const container = document.getElementById('pdfViewerContainer');
+            container.innerHTML = ''; // আগের কোনো কনটেন্ট থাকলে ক্লিয়ার করবে
+
+            // সব পেজ রেন্ডার করবে যাতে স্ক্রিন ফিট হয়
+            let renderPage = function(pageNumber) {
+                pdf.getPage(pageNumber).then(page => {
+                    const viewport = page.getViewport({ scale: 1.5 });
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+
+                    container.appendChild(canvas);
+                    page.render(renderContext);
+
+                    if (pageNumber < pdf.numPages) {
+                        renderPage(pageNumber + 1);
+                    }
+                });
+            };
+
+            renderPage(1);
+
+            // লোডিং বন্ধ করে পিডিএফ দেখাবে
+            document.getElementById('loadingSection').style.display = 'none';
+            container.style.display = 'flex';
+
+        }).catch(error => {
+            showError("❌ Document Not Found", "The requested file does not exist or couldn't be loaded.");
+        });
     }
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -125,27 +175,11 @@
                 return;
             }
 
-            // pdfs ফোল্ডারটি files-portal এর ভেতরেই আছে
             const pdfUrl = `pdfs/${decryptedRealId}.pdf`;
 
-            // ফাইলটি সার্ভারে আছে কিনা চেক করা
-            fetch(pdfUrl, { method: 'HEAD' })
-                .then(response => {
-                    if (response.ok) {
-                        setTimeout(() => {
-                            document.getElementById('loadingSection').style.display = 'none';
-                            const iframe = document.getElementById('pdfViewer');
-                            // toolbar, navpanes হাইড এবং পেজ ফিট প্যারামিটার সহ iframe-এ লোড
-                            iframe.src = `${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
-                            iframe.style.display = 'block';
-                        }, 1500);
-                    } else {
-                        showError("❌ Document Not Found", "The requested file does not exist in records.");
-                    }
-                })
-                .catch(error => {
-                    showError("❌ System Error", "Unable to complete verification portal request.");
-                });
+            setTimeout(() => {
+                renderPDF(pdfUrl);
+            }, 1500);
 
         } catch (e) {
             showError("❌ Error", "Invalid Security Encryption Format.");
