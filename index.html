@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Chamber Files Portal - Verification</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <!-- PDF.js Library for direct rendering without native browser viewer/toolbar -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; width: 100%; background-color: #1a1a1a; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
@@ -204,20 +206,23 @@
             background: #525659;
             position: relative;
             overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px 0;
             -webkit-overflow-scrolling: touch;
         }
 
-        #pdfIframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            display: block;
+        #pdfCanvas {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             transform-origin: top center;
             transition: transform 0.2s ease;
+            max-width: 95%;
+            height: auto;
         }
 
         /* ডার্ক মোড ইনভার্স ইফেক্ট */
-        .dark-active #pdfIframe {
+        .dark-active #pdfCanvas {
             filter: invert(0.9) hue-rotate(180deg);
         }
 
@@ -295,11 +300,11 @@
                 </div>
                 
                 <div class="group-container">
-                    <button class="toolbar-btn shape-rect" title="Previous Page">
+                    <button class="toolbar-btn shape-rect" id="prevPageBtn" title="Previous Page">
                         <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>
                     </button>
-                    <div class="toolbar-btn shape-big-rect" title="Page Count">1/01</div>
-                    <button class="toolbar-btn shape-rect" title="Next Page">
+                    <div class="toolbar-btn shape-big-rect" id="pageCounter" title="Page Count">1/01</div>
+                    <button class="toolbar-btn shape-rect" id="nextPageBtn" title="Next Page">
                         <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
                     </button>
                 </div>
@@ -345,8 +350,8 @@
         </div>
 
         <div class="pdf-viewer-container" id="pdfContainer">
-            <!-- সরাসরি embed ব্যবহার করা হয়েছে যাতে গুগল ভিউয়ারের বাড়তি বার না আসে -->
-            <embed id="pdfIframe" type="application/pdf" src="">
+            <!-- Canvas tag will directly render PDF pixels cleanly -->
+            <canvas id="pdfCanvas"></canvas>
         </div>
     </div>
 
@@ -357,10 +362,17 @@
     </div>
 
 <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
     const SECRET_KEY = "ChamberOfficialSecretKey#2026";
     let currentZoom = 1.5; 
     let currentRotation = 0;
     let globalPdfUrl = "";
+    
+    let pdfDoc = null;
+    let pageNum = 1;
+    let pageRendering = false;
+    let pageNumPending = null;
 
     function getQueryParam(param) {
         const urlParams = new URLSearchParams(window.location.search);
@@ -375,6 +387,54 @@
         document.getElementById('errorTitle').innerText = title;
         document.getElementById('errorDesc').innerText = desc;
     }
+
+    function renderPage(num) {
+        pageRendering = true;
+        pdfDoc.getPage(num).then(function(page) {
+            const canvas = document.getElementById('pdfCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            const viewport = page.getViewport({ scale: 1.5 });
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            const renderContext = {
+                canvasContext: ctx,
+                viewport: viewport
+            };
+            const renderTask = page.render(renderContext);
+
+            renderTask.promise.then(function() {
+                pageRendering = false;
+                if (pageNumPending !== null) {
+                    renderPage(pageNumPending);
+                    pageNumPending = null;
+                }
+            });
+        });
+
+        document.getElementById('pageCounter').innerText = `${num}/${pdfDoc.numPages < 10 ? '0' + pdfDoc.numPages : pdfDoc.numPages}`;
+    }
+
+    function queueRenderPage(num) {
+        if (pageRendering) {
+            pageNumPending = num;
+        } else {
+            renderPage(num);
+        }
+    }
+
+    document.getElementById('prevPageBtn').addEventListener('click', () => {
+        if (pageNum <= 1) return;
+        pageNum--;
+        queueRenderPage(pageNum);
+    });
+
+    document.getElementById('nextPageBtn').addEventListener('click', () => {
+        if (pageNum >= pdfDoc.numPages) return;
+        pageNum++;
+        queueRenderPage(pageNum);
+    });
 
     document.getElementById('zoomSelect').addEventListener('change', function(e) {
         currentZoom = parseFloat(e.target.value);
@@ -403,8 +463,8 @@
     }
 
     function applyTransforms() {
-        const iframe = document.getElementById('pdfIframe');
-        iframe.style.transform = `scale(${currentZoom}) rotate(${currentRotation}deg)`;
+        const canvas = document.getElementById('pdfCanvas');
+        canvas.style.transform = `scale(${currentZoom}) rotate(${currentRotation}deg)`;
     }
 
     function toggleDarkMode() {
@@ -439,40 +499,33 @@
 
             globalPdfUrl = `pdfs/${decryptedRealId}.pdf`;
 
-            fetch(globalPdfUrl, { method: 'HEAD' })
-                .then(response => {
-                    if (response.ok) {
-                        // Google Docs Viewer-এর লিঙ্ক বাদ দিয়ে সরাসরি PDF পাথ ও টুলবার হাইড প্যারামিটার বসানো হয়েছে
-                        const iframe = document.getElementById('pdfIframe');
-                        iframe.src = `${globalPdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
-                        
-                        document.getElementById('downloadBtn').onclick = function() {
-                            const link = document.createElement('a');
-                            link.href = globalPdfUrl;
-                            link.download = `${decryptedRealId}.pdf`;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                        };
+            pdfjsLib.getDocument(globalPdfUrl).promise.then(pdfDoc_ => {
+                pdfDoc = pdfDoc_;
+                renderPage(pageNum);
 
-                        setTimeout(() => {
-                            document.getElementById('loadingSection').style.display = 'none';
-                            document.getElementById('interstitialPopup').style.display = 'flex';
+                document.getElementById('downloadBtn').onclick = function() {
+                    const link = document.createElement('a');
+                    link.href = globalPdfUrl;
+                    link.download = `${decryptedRealId}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                };
 
-                            setTimeout(() => {
-                                document.getElementById('interstitialPopup').style.display = 'none';
-                                document.getElementById('mainPortal').style.display = 'flex';
-                                applyTransforms();
-                            }, 750); 
+                setTimeout(() => {
+                    document.getElementById('loadingSection').style.display = 'none';
+                    document.getElementById('interstitialPopup').style.display = 'flex';
 
-                        }, 1800);
-                    } else {
-                        showError("Document Not Found", "The requested file does not exist in records.");
-                    }
-                })
-                .catch(error => {
-                    showError("System Error", "Unable to complete verification portal request.");
-                });
+                    setTimeout(() => {
+                        document.getElementById('interstitialPopup').style.display = 'none';
+                        document.getElementById('mainPortal').style.display = 'flex';
+                        applyTransforms();
+                    }, 750); 
+
+                }, 1800);
+            }).catch(error => {
+                showError("Document Not Found", "The requested file does not exist in records.");
+            });
 
         } catch (e) {
             showError("Error", "Invalid Security Encryption Format.");
