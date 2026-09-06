@@ -7,13 +7,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            background-color: #1a1a1a;
+            overflow: hidden;
+        }
+        
         body { 
-            background-color: #1a1a1a; 
             display: flex; 
             justify-content: center; 
             align-items: center; 
-            min-height: 100vh; 
-            overflow: hidden;
         }
         
         /* ব্লিঙ্কিং লোগো কন্টেইনার */
@@ -59,6 +63,18 @@
         }
         .error-title { color: #c62828; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
         .error-desc { color: #555; font-size: 14px; }
+
+        /* পুরো স্ক্রিন জুরে পিডিএফ দেখানোর আইফ্রেম স্টাইল */
+        #pdfViewer {
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 9999;
+        }
     </style>
 </head>
 <body>
@@ -72,6 +88,9 @@
         <div id="errorTitle" class="error-title"></div>
         <div id="errorDesc" class="error-desc"></div>
     </div>
+
+    <!-- ফুল-স্ক্রিন পিডিএফ ভিউয়ার -->
+    <iframe id="pdfViewer"></iframe>
 
 <script>
     const SECRET_KEY = "ChamberOfficialSecretKey#2026";
@@ -113,13 +132,13 @@
             fetch(pdfUrl, { method: 'HEAD' })
                 .then(response => {
                     if (response.ok) {
-                        // ফাইল পাওয়া গেছে!
-                        // #zoom=page-fit parameters যোগ করে অটোমেটিক ফিট ভিউ সেট করা হয়েছে
-                        const formattedPdfUrl = `${pdfUrl}#zoom=page-fit&toolbar=0&navpanes=0`;
-
                         setTimeout(() => {
-                            window.location.replace(formattedPdfUrl);
-                        }, 1500); // ১.৫ সেকেন্ড লোগো ব্লিঙ্ক করার পর অটোমেটিক রিডাইরেক্ট হবে
+                            document.getElementById('loadingSection').style.display = 'none';
+                            const iframe = document.getElementById('pdfViewer');
+                            // toolbar, navpanes হাইড এবং পেজ ফিট প্যারামিটার সহ iframe-এ লোড
+                            iframe.src = `${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
+                            iframe.style.display = 'block';
+                        }, 1500);
                     } else {
                         showError("❌ Document Not Found", "The requested file does not exist in records.");
                     }
